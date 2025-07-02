@@ -9,13 +9,31 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- الأيقونة -->
+<div class="designer-info" onclick="togglePopup()">
+    ℹ️
+</div>
+
+<!-- النافذة المنبثقة -->
+<div class="popup" id="info-popup">
+    <img src="images/cv.jpg" alt="cv">
+    <h3>Waleed Adel Salah</h3>
+    <p>Demonstrator at SVU</p>
+    <p>Waledadel983@gmail.com</p>
+</div>
+
+<!-- خلفية شبه شفافة -->
+<div class="overlay" id="info-overlay" onclick="togglePopup()"></div>
     <div class="header">
         <div class="logo">خدمات الأقصر</div>
         <div class="search-bar">
             <input type="text" id="search-input" placeholder="ابحث عن خدمة أو مكان...">
             <button id="search-button">🔍</button>
         </div>
+
+
         <div class="menu-icon">☰</div>
+
     </div>
 
     <div id="map"></div> <div class="category-bar">
@@ -42,5 +60,9 @@
     </div>
 
     <script src="script.js"></script>
+
+
+
+
 </body>
 </html>
