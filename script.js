@@ -197,32 +197,69 @@ window.onclick = function(event) {
 // وظائف البحث عن أقرب خدمة
 // **********************************************
 
+// **********************************************
+// وظائف المودال الجديد لأقرب الخدمات (المعايير)
+// **********************************************
+const nearestServicesCriteriaModal = document.getElementById('nearest-services-criteria-modal');
+const closeNearestModalButton = document.getElementById('close-nearest-modal');
+const nearestServiceTypeSelect = document.getElementById('nearest-service-type-select');
+const findNearestBtnInModal = document.getElementById('find-nearest-btn-in-modal');
+
+// عند النقر على زر "أقرب الخدمات لي"
 document.getElementById('nearest-services-btn').addEventListener('click', function() {
     if (!userMarker) {
         alert("يرجى السماح بتحديد موقعك أولاً للعثور على أقرب الخدمات.");
         getUserLocation(); // محاولة تحديد الموقع إذا لم يكن متاحًا
         return;
     }
+    nearestServicesCriteriaModal.style.display = 'flex'; // إظهار المودال
+});
 
+// إغلاق المودال من زر الإغلاق
+closeNearestModalButton.onclick = function() {
+    nearestServicesCriteriaModal.style.display = 'none';
+}
+
+// إغلاق المودال عند النقر خارج المحتوى
+window.addEventListener('click', function(event) {
+    if (event.target == nearestServicesCriteriaModal) {
+        nearestServicesCriteriaModal.style.display = 'none';
+    }
+});
+
+// عند النقر على زر "البحث" داخل مودال أقرب الخدمات
+findNearestBtnInModal.addEventListener('click', function() {
+    const selectedCategory = nearestServiceTypeSelect.value;
     const userLatLng = userMarker.getLatLng();
-    const distances = services.map(service => {
+
+    let filteredServices = services;
+    if (selectedCategory !== 'all') {
+        filteredServices = services.filter(service => service.type === selectedCategory);
+    }
+
+    const distances = filteredServices.map(service => {
         const serviceLatLng = L.latLng(service.lat, service.lng);
-        // حساب المسافة بالمتر باستخدام Leaflet
         const distance = userLatLng.distanceTo(serviceLatLng);
         return { service: service, distance: distance };
     });
 
-    // ترتيب الخدمات حسب المسافة (الأقرب أولاً)
     distances.sort((a, b) => a.distance - b.distance);
 
-    // هنا يجب عرض قائمة بالخدمات المرتبة (ليس فقط على الخريطة)
-    // في هذه المرحلة، سنعرض فقط أقرب 5 خدمات في تنبيه بسيط
-    let nearestList = "أقرب الخدمات إليك:\n";
-    for (let i = 0; i < Math.min(5, distances.length); i++) {
-        nearestList += `${distances[i].service.name} (${(distances[i].distance / 1000).toFixed(2)} كم)\n`;
+    nearestServicesCriteriaModal.style.display = 'none'; // إخفاء المودال بعد البحث
+
+    // عرض النتائج في تنبيه (يمكن تعديلها لاحقًا لعرضها بشكل أفضل)
+    let nearestList = `أقرب ${selectedCategory === 'all' ? 'الخدمات' : nearestServiceTypeSelect.options[nearestServiceTypeSelect.selectedIndex].text} إليك:\n`;
+    if (distances.length === 0) {
+        nearestList += "لم يتم العثور على خدمات مطابقة في هذه الفئة.";
+    } else {
+        for (let i = 0; i < Math.min(5, distances.length); i++) {
+            nearestList += `${distances[i].service.name} (${(distances[i].distance / 1000).toFixed(2)} كم)\n`;
+        }
     }
     alert(nearestList);
-    // مستقبلاً: سنقوم ببناء شاشة قائمة تفصيلية هنا
+
+    // اختياري: يمكنك هنا عرض هذه الخدمات على الخريطة فقط
+    // displayServices(distances.map(d => d.service));
 });
 
 

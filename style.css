@@ -285,3 +285,36 @@ body {
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 999;
         }
+
+
+/* تنسيق المودال الخاص بأقرب الخدمات */
+#nearest-services-criteria-modal .modal-content {
+    max-width: 400px; /* يمكن تعديل العرض حسب الحاجة */
+    text-align: right;
+}
+
+#nearest-service-type-select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box; /* لضمان أن العرض يشمل البادينغ والحدود */
+}
+
+#find-nearest-btn-in-modal {
+    background-color: #4CAF50; /* لون أخضر مشابه للرأس */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    width: 100%; /* اجعل الزر يملأ العرض */
+}
+
+#find-nearest-btn-in-modal:hover {
+    background-color: #45a049;
+}
