@@ -15,7 +15,7 @@ let map = L.map('map').setView([25.6900, 32.6390], 13); // مركز الخريط
 
 // إضافة طبقة خرائط OpenStreetMap
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
 let userMarker; // لتخزين علامة موقع المستخدم
@@ -28,31 +28,51 @@ let serviceMarkers = L.layerGroup().addTo(map); // لتخزين علامات ا�
 // وظيفة الحصول على موقع المستخدم
 function getUserLocation() {
     if (navigator.geolocation) {
-        navigator.geolocation.locate({setView: true, maxZoom: 16}); // يطلب تحديد الموقع ويركز الخريطة عليه
-        map.on('locationfound', onLocationFound);
-        map.on('locationerror', onLocationError);
+        // هذا هو السطر الذي تم تصحيحه!
+        // نستخدم getCurrentPosition للحصول على الموقع لمرة واحدة
+        navigator.geolocation.getCurrentPosition(onLocationFound, onLocationError, {
+            enableHighAccuracy: true, // محاولة الحصول على أدق موقع ممكن
+            timeout: 10000,           // مهلة 10 ثوانٍ قبل الإبلاغ عن خطأ
+            maximumAge: 0             // لا نستخدم نتائج سابقة مخبأة
+        });
     } else {
-        alert("المتصفح لا يدعم تحديد الموقع الجغرافي.");
-        // إذا لم يدعم المتصفح، يمكن هنا توجيه المستخدم لإدخال موقعه يدويًا
+        alert("متصفحك لا يدعم تحديد الموقع الجغرافي. يرجى استخدام متصفح أحدث.");
+        displayServices(services); // عرض الخدمات بدون موقع المستخدم إذا كان التحديد غير مدعوم
     }
 }
 
 // عند العثور على موقع المستخدم
-function onLocationFound(e) {
+function onLocationFound(position) {
+    const latlng = L.latLng(position.coords.latitude, position.coords.longitude);
     if (userMarker) {
         map.removeLayer(userMarker); // إزالة العلامة القديمة إذا كانت موجودة
     }
-    userMarker = L.marker(e.latlng).addTo(map)
+    userMarker = L.marker(latlng).addTo(map)
         .bindPopup("موقعك الحالي").openPopup();
-    map.setView(e.latlng, 15); // تكبير الخريطة على موقع المستخدم
+    map.setView(latlng, 15); // تكبير الخريطة على موقع المستخدم
 
     displayServices(services); // عرض كل الخدمات بعد تحديد موقع المستخدم
 }
 
 // عند حدوث خطأ في تحديد الموقع
-function onLocationError(e) {
-    alert("تعذر تحديد موقعك: " + e.message + ". سيتم عرض الخدمات في الأقصر بشكل عام.");
-    displayServices(services); // عرض الخدمات بدون تحديد موقع المستخدم
+function onLocationError(error) {
+    let errorMessage = "تعذر تحديد موقعك. سيتم عرض الخدمات في الأقصر بشكل عام.";
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            errorMessage = "تم رفض إذن تحديد الموقع. يرجى السماح بالوصول لموقعك.";
+            break;
+        case error.POSITION_UNAVAILABLE:
+            errorMessage = "معلومات الموقع غير متوفرة حالياً.";
+            break;
+        case error.TIMEOUT:
+            errorMessage = "انتهت مهلة طلب تحديد الموقع.";
+            break;
+        case error.UNKNOWN_ERROR:
+            errorMessage = "حدث خطأ غير معروف أثناء تحديد الموقع.";
+            break;
+    }
+    alert(errorMessage);
+    displayServices(services); // عرض الخدمات بدون موقع المستخدم
 }
 
 // **********************************************
@@ -111,7 +131,17 @@ function showServiceDetails(serviceId) {
     const service = services.find(s => s.id === serviceId);
     if (service) {
         modalServiceName.textContent = service.name;
-        modalServiceType.textContent = `النوع: ${service.type === 'hospitals' ? 'مستشفى' : service.type === 'pharmacies' ? 'صيدلية' : service.type === 'police' ? 'شرطة' : service.type === 'banks' ? 'بنك' : service.type === 'post-offices' ? 'بريد' : service.type}`;
+        // تحويل أنواع الخدمات للعربية للعرض
+        let serviceTypeArabic;
+        switch(service.type) {
+            case 'hospitals': serviceTypeArabic = 'مستشفى'; break;
+            case 'pharmacies': serviceTypeArabic = 'صيدلية'; break;
+            case 'police': serviceTypeArabic = 'شرطة'; break;
+            case 'banks': serviceTypeArabic = 'بنك'; break;
+            case 'post-offices': serviceTypeArabic = 'بريد'; break;
+            default: serviceTypeArabic = service.type;
+        }
+        modalServiceType.textContent = `النوع: ${serviceTypeArabic}`;
         modalServiceAddress.textContent = `العنوان: ${service.address}`;
         modalServicePhone.textContent = `الهاتف: ${service.phone}`;
         modalServiceHours.textContent = `ساعات العمل: ${service.hours}`;
@@ -122,11 +152,11 @@ function showServiceDetails(serviceId) {
                 const userLat = userMarker.getLatLng().lat;
                 const userLng = userMarker.getLatLng().lng;
                 // فتح خرائط جوجل مع توجيهات
-                window.open(`https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${service.lat},${service.lng}&travelmode=driving`, '_blank');
+                window.open(`http://maps.google.com/maps?saddr=${userLat},${userLng}&daddr=${service.lat},${service.lng}&travelmode=driving`, '_blank');
             } else {
                 alert("يرجى السماح بتحديد موقعك للحصول على توجيهات دقيقة.");
                 // أو يمكن فتح الخريطة مع الوجهة فقط
-                window.open(`https://www.google.com/maps/search/?api=1&query=${service.lat},${service.lng}`, '_blank');
+                window.open(`http://maps.google.com/maps?q=${service.lat},${service.lng}`, '_blank');
             }
         };
 
@@ -184,6 +214,7 @@ document.getElementById('nearest-services-btn').addEventListener('click', functi
 document.getElementById('search-button').addEventListener('click', performSearch);
 document.getElementById('search-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
+        e.preventDefault(); // منع الإرسال الافتراضي للنموذج إذا كان موجودا
         performSearch();
     }
 });
@@ -198,7 +229,12 @@ function performSearch() {
     const searchResults = services.filter(service =>
         service.name.toLowerCase().includes(searchTerm) ||
         service.address.toLowerCase().includes(searchTerm) ||
-        service.type.toLowerCase().includes(searchTerm) // يمكن توسيع البحث ليشمل الوصف أيضاً
+        // يمكن توسيع البحث ليشمل الوصف أيضاً أو ترجمة أنواع الخدمات
+        (service.type === 'hospitals' && 'مستشفى'.includes(searchTerm)) ||
+        (service.type === 'pharmacies' && 'صيدلية'.includes(searchTerm)) ||
+        (service.type === 'police' && 'شرطة'.includes(searchTerm)) ||
+        (service.type === 'banks' && 'بنك'.includes(searchTerm)) ||
+        (service.type === 'post-offices' && 'بريد'.includes(searchTerm))
     );
     displayServices(searchResults);
     if (searchResults.length === 0) {
@@ -216,11 +252,12 @@ document.getElementById('recenter-btn').addEventListener('click', function() {
     if (userMarker) {
         map.setView(userMarker.getLatLng(), 15);
     } else {
-        getUserLocation(); // محاولة تحديد الموقع إذا لم يكن متاحًا
+        // إذا لم يكن موقع المستخدم متاحًا، نطلب تحديده أولاً
+        getUserLocation();
     }
 });
 
 
 // استدعاء تحديد الموقع عند تحميل الصفحة لأول مرة
 getUserLocation();
-displayServices(services); // عرض الخدمات مبدئيًا حتى قبل تحديد الموقع
+// displayServices(services); // لا تستدعيها هنا، onLocationFound أو onLocationError ستستدعيها
