@@ -1,14 +1,24 @@
 // بيانات وهمية للخدمات في الأقصر (ستأتي من الواجهة الخلفية لاحقًا)
 // الإحداثيات هنا تقريبية لمناطق في الأقصر
-const services = [
-    { id: 1, name: "مستشفى الأقصر الدولي", type: "hospitals", lat: 25.6888, lng: 32.6394, address: "شارع خالد بن الوليد", phone: "0952378800", hours: "مفتوح 24 ساعة" },
-    { id: 2, name: "صيدلية المدينة المنورة", type: "pharmacies", lat: 25.6945, lng: 32.6450, address: "شارع التلفزيون", phone: "0952381234", hours: "مفتوح حتى 11 مساءً" },
-    { id: 3, name: "قسم شرطة الأقصر", type: "police", lat: 25.6960, lng: 32.6380, address: "ش. الجمهورية", phone: "122", hours: "مفتوح 24 ساعة" },
-    { id: 4, name: "بنك مصر - فرع الأقصر", type: "banks", lat: 25.6910, lng: 32.6410, address: "ش. معبد الكرنك", phone: "19888", hours: "من 9 صباحاً حتى 2 مساءً" },
-    { id: 5, name: "مكتب بريد الأقصر الرئيسي", type: "post-offices", lat: 25.6890, lng: 32.6370, address: "ش. المحطة", phone: "0952379000", hours: "من 8 صباحاً حتى 3 مساءً" },
-    { id: 6, name: "مستشفى الأقصر العام", type: "hospitals", lat: 25.6980, lng: 32.6350, address: "ش. كورنيش النيل", phone: "0952377777", hours: "مفتوح 24 ساعة" },
-    { id: 7, name: "صيدلية العوامية", type: "pharmacies", lat: 25.6790, lng: 32.6490, address: "حي العوامية", phone: "0952376543", hours: "مفتوح حتى 10 مساءً" },
-];
+let services = []; // الآن، هذا المتغير سيكون فارغًا في البداية وسيتم ملؤه من ملف JSON
+
+// دالة جديدة لجلب البيانات وتشغيل التطبيق
+async function fetchServicesAndInitialize() {
+    try {
+        const response = await fetch('services.json'); // اسم ملف JSON الخاص بك
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        services = await response.json(); // قم بتعيين البيانات للمتغير 'services'
+        console.log('Services loaded successfully:', services);
+        getUserLocation(); // بعد تحميل الخدمات، ابدأ في الحصول على موقع المستخدم
+    } catch (error) {
+        console.error('Failed to load services:', error);
+        alert("تعذر تحميل بيانات الخدمات. يرجى التأكد من وجود ملف services.json وتشغيل خادم محلي.");
+        // لا يزال من الممكن محاولة تحديد موقع المستخدم، ولكن لن تظهر الخدمات
+        getUserLocation();
+    }
+}
 
 // تهيئة الخريطة باستخدام Leaflet
 let map = L.map('map').setView([25.6900, 32.6390], 13); // مركز الخريطة الأولي (قرب وسط الأقصر) ومستوى التكبير
@@ -258,6 +268,5 @@ document.getElementById('recenter-btn').addEventListener('click', function() {
 });
 
 
-// استدعاء تحديد الموقع عند تحميل الصفحة لأول مرة
-getUserLocation();
-// displayServices(services); // لا تستدعيها هنا، onLocationFound أو onLocationError ستستدعيها
+// استدعاء الدالة الجديدة لبدء تحميل البيانات وتشغيل التطبيق عند تحميل الصفحة لأول مرة
+fetchServicesAndInitialize();
