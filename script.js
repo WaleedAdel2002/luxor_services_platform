@@ -245,7 +245,24 @@ findNearestBtnInModal.addEventListener('click', function() {
 
     distances.sort((a, b) => a.distance - b.distance);
 
+
     nearestServicesCriteriaModal.style.display = 'none'; // إخفاء المودال بعد البحث
+
+
+
+if (distances.length > 0) {
+        const nearestService = distances[0].service; // أقرب خدمة هي الأولى بعد الترتيب
+        map.setView([nearestService.lat, nearestService.lng], 16); // تكبير الخريطة على أقرب خدمة، 16 هو مستوى زووم جيد
+
+        // اختياري: فتح الـ popup الخاص بالخدمة تلقائيا بعد الانتقال إليها
+        serviceMarkers.eachLayer(function(layer) {
+            // للتأكد من فتح الـ popup الصحيح، يجب أن يكون الماركر لديه خاصية id مطابقة لـ service.id
+            // تأكد أنك قمت بتعديل دالة displayServices لإضافة id للماركر
+            if (layer.options && layer.options.id === nearestService.id) {
+                layer.openPopup();
+            }
+        });
+    }
 
     // عرض النتائج في تنبيه (يمكن تعديلها لاحقًا لعرضها بشكل أفضل)
     let nearestList = `أقرب ${selectedCategory === 'all' ? 'الخدمات' : nearestServiceTypeSelect.options[nearestServiceTypeSelect.selectedIndex].text} إليك:\n`;
