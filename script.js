@@ -156,20 +156,28 @@ function showServiceDetails(serviceId) {
         modalServicePhone.textContent = `الهاتف: ${service.phone}`;
         modalServiceHours.textContent = `ساعات العمل: ${service.hours}`;
 
-        // إعداد زر التوجيه
-        modalDirectionsBtn.onclick = () => {
-            if (userMarker) {
-                const userLat = userMarker.getLatLng().lat;
-                const userLng = userMarker.getLatLng().lng;
-                // فتح خرائط جوجل مع توجيهات
-                window.open(`http://maps.google.com/maps?saddr=${userLat},${userLng}&daddr=${service.lat},${service.lng}&travelmode=driving`, '_blank');
-            } else {
-                alert("يرجى السماح بتحديد موقعك للحصول على توجيهات دقيقة.");
-                // أو يمكن فتح الخريطة مع الوجهة فقط
-                window.open(`http://maps.google.com/maps?q=${service.lat},${service.lng}`, '_blank');
-            }
-        };
+// إعداد زر "الانتقال إلى الموقع على الخريطة"
+        // سنفترض أن زر التوجيه (modalDirectionsBtn) سيُستخدم لهذا الغرض الآن
+        modalDirectionsBtn.textContent = 'الانتقال إلى الموقع على الخريطة'; // تغيير نص الزر ليكون واضحًا
 
+        modalDirectionsBtn.onclick = () => {
+            // إخفاء المودال أولاً
+            modal.style.display = 'none';
+
+            // الانتقال إلى إحداثيات الخدمة وتكبير الخريطة عليها
+            map.setView([service.lat, service.lng], 16); // 16 هو مستوى تكبير جيد لرؤية تفاصيل الموقع
+            
+            // اختياري: فتح الـ popup الخاص بالخدمة تلقائيًا عند الانتقال إليها
+            // للقيام بذلك، نحتاج لإيجاد العلامة الخاصة بالخدمة
+            serviceMarkers.eachLayer(function(layer) {
+                if (layer.options.id === service.id) { // إذا كان لديك معرف للعلامة
+                    layer.openPopup();
+                }
+            });
+            // ملاحظة: لكي تعمل ميزة فتح الـ popup التلقائية، يجب إضافة 'id' كخيار للماركر عند إنشائه
+            // في دالة displayServices، قم بتعديل سطر إنشاء الماركر ليصبح:
+            // const marker = L.marker([service.lat, service.lng], { id: service.id }).addTo(serviceMarkers);
+        };
         modal.style.display = 'flex'; // إظهار المودال (نستخدم flex لجعلها تتوسط)
     }
 }
