@@ -93,7 +93,8 @@ function onLocationError(error) {
 function displayServices(servicesToShow) {
     serviceMarkers.clearLayers(); // مسح العلامات الموجودة
     servicesToShow.forEach(service => {
-        const marker = L.marker([service.lat, service.lng]).addTo(serviceMarkers);
+        // تم التعديل هنا: إضافة id للماركر
+        const marker = L.marker([service.lat, service.lng], { id: service.id }).addTo(serviceMarkers);
         marker.bindPopup(`<b>${service.name}</b><br>${service.address}<br><a href="#" data-id="${service.id}" class="show-details">المزيد من التفاصيل</a>`);
         // عند النقر على الرابط في الـ popup، نعرض المودال
         marker.on('popupopen', function (e) {
@@ -156,34 +157,23 @@ function showServiceDetails(serviceId) {
         modalServicePhone.textContent = `الهاتف: ${service.phone}`;
         modalServiceHours.textContent = `ساعات العمل: ${service.hours}`;
 
-// إعداد زر "الانتقال إلى الموقع على الخريطة"
-        // سنفترض أن زر التوجيه (modalDirectionsBtn) سيُستخدم لهذا الغرض الآن
-        modalDirectionsBtn.textContent = 'الانتقال إلى الموقع على الخريطة'; // تغيير نص الزر ليكون واضحًا
-
+        // إعداد زر "الانتقال إلى الموقع على الخريطة"
+        modalDirectionsBtn.textContent = 'الانتقال إلى الموقع على الخريطة';
         modalDirectionsBtn.onclick = () => {
-            // إخفاء المودال أولاً
             modal.style.display = 'none';
-
-            // الانتقال إلى إحداثيات الخدمة وتكبير الخريطة عليها
-            map.setView([service.lat, service.lng], 16); // 16 هو مستوى تكبير جيد لرؤية تفاصيل الموقع
-            
-            // اختياري: فتح الـ popup الخاص بالخدمة تلقائيًا عند الانتقال إليها
-            // للقيام بذلك، نحتاج لإيجاد العلامة الخاصة بالخدمة
+            map.setView([service.lat, service.lng], 16);
             serviceMarkers.eachLayer(function(layer) {
-                if (layer.options.id === service.id) { // إذا كان لديك معرف للعلامة
+                if (layer.options.id === service.id) {
                     layer.openPopup();
                 }
             });
-            // ملاحظة: لكي تعمل ميزة فتح الـ popup التلقائية، يجب إضافة 'id' كخيار للماركر عند إنشائه
-            // في دالة displayServices، قم بتعديل سطر إنشاء الماركر ليصبح:
-            // const marker = L.marker([service.lat, service.lng], { id: service.id }).addTo(serviceMarkers);
         };
-        modal.style.display = 'flex'; // إظهار المودال (نستخدم flex لجعلها تتوسط)
+        modal.style.display = 'flex';
     }
 }
 
 closeButton.onclick = function() {
-    modal.style.display = 'none'; // إخفاء المودال
+    modal.style.display = 'none';
 }
 
 // إخفاء المودال عند النقر خارج المحتوى
@@ -194,7 +184,7 @@ window.onclick = function(event) {
 }
 
 // **********************************************
-// وظائف البحث عن أقرب خدمة
+// وظائف البحث عن أقرب خدمة (باستخدام Leaflet Routing Machine)
 // **********************************************
 
 // **********************************************
@@ -227,6 +217,9 @@ window.addEventListener('click', function(event) {
     }
 });
 
+// **************************************************************************
+// تم التعديل بالكامل هنا: منطق حساب المسافة بالمسار باستخدام Leaflet Routing Machine
+// **************************************************************************
 // عند النقر على زر "البحث" داخل مودال أقرب الخدمات
 findNearestBtnInModal.addEventListener('click', function() {
     const selectedCategory = nearestServiceTypeSelect.value;
@@ -237,47 +230,126 @@ findNearestBtnInModal.addEventListener('click', function() {
         filteredServices = services.filter(service => service.type === selectedCategory);
     }
 
-    const distances = filteredServices.map(service => {
-        const serviceLatLng = L.latLng(service.lat, service.lng);
-        const distance = userLatLng.distanceTo(serviceLatLng);
-        return { service: service, distance: distance };
-    });
-
-    distances.sort((a, b) => a.distance - b.distance);
-
-
     nearestServicesCriteriaModal.style.display = 'none'; // إخفاء المودال بعد البحث
 
-
-
-if (distances.length > 0) {
-        const nearestService = distances[0].service; // أقرب خدمة هي الأولى بعد الترتيب
-        map.setView([nearestService.lat, nearestService.lng], 16); // تكبير الخريطة على أقرب خدمة، 16 هو مستوى زووم جيد
-
-        // اختياري: فتح الـ popup الخاص بالخدمة تلقائيا بعد الانتقال إليها
-        serviceMarkers.eachLayer(function(layer) {
-            // للتأكد من فتح الـ popup الصحيح، يجب أن يكون الماركر لديه خاصية id مطابقة لـ service.id
-            // تأكد أنك قمت بتعديل دالة displayServices لإضافة id للماركر
-            if (layer.options && layer.options.id === nearestService.id) {
-                layer.openPopup();
-            }
-        });
+    if (!userLatLng) {
+        alert("لا يمكن حساب المسافة، موقع المستخدم غير معروف.");
+        return;
     }
 
-    // عرض النتائج في تنبيه (يمكن تعديلها لاحقًا لعرضها بشكل أفضل)
-    let nearestList = `أقرب ${selectedCategory === 'all' ? 'الخدمات' : nearestServiceTypeSelect.options[nearestServiceTypeSelect.selectedIndex].text} إليك:\n`;
-    if (distances.length === 0) {
-        nearestList += "لم يتم العثور على خدمات مطابقة في هذه الفئة.";
-    } else {
-        for (let i = 0; i < Math.min(5, distances.length); i++) {
-            nearestList += `${distances[i].service.name} (${(distances[i].distance / 1000).toFixed(2)} كم)\n`;
+    // إخفاء كل العلامات القديمة والممرات
+    serviceMarkers.clearLayers();
+    if (window.currentRouteControl) { // تأكد من إزالة المسار القديم إذا كان موجوداً
+        map.removeControl(window.currentRouteControl);
+        window.currentRouteControl = null;
+    }
+
+    // إذا لم تكن هناك خدمات مفلترة، قم بعرض رسالة
+    if (filteredServices.length === 0) {
+        alert("لم يتم العثور على خدمات مطابقة في هذه الفئة.");
+        return;
+    }
+
+    let nearestService = null;
+    let minDistance = Infinity; // استخدام مسافة كبيرة جداً كقيمة مبدئية
+
+    let completedRequests = 0;
+    const totalRequests = filteredServices.length;
+
+    // عرض رسالة "جاري الحساب..." للمستخدم
+    alert("جاري حساب أقرب مسار. قد يستغرق الأمر بعض الوقت...");
+
+    // حلقة لطلب المسار لكل خدمة مفلترة
+    filteredServices.forEach(service => {
+        L.Routing.control({
+            waypoints: [
+                L.latLng(userLatLng.lat, userLatLng.lng),
+                L.latLng(service.lat, service.lng)
+            ],
+            router: L.Routing.osrmv1(), // استخدام OSRM كخدمة توجيه افتراضية
+            profile: 'driving', // نوع المسار: 'driving' للسيارة، يمكنك تغيير هذا إلى 'walking' أو 'cycling'
+            createMarker: function() { return null; }, // لا تنشئ markers افتراضية
+            addWaypoints: false, // لا تسمح بإضافة نقاط طريق يدوياً
+            routeWhileDragging: false, // لا تعيد التوجيه أثناء سحب الخريطة
+            fitSelectedRoutes: false // لا تقم بتكبير الخريطة تلقائياً على المسار
+        }).on('routesfound', function(e) {
+            const routes = e.routes;
+            if (routes.length > 0) {
+                const route = routes[0];
+                const distance = route.summary.totalDistance; // المسافة بالمتر
+                const time = route.summary.totalTime; // الوقت بالثواني
+
+                // قارن هذه المسافة مع الحد الأدنى الحالي
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestService = service;
+                    nearestService.routeDistance = distance; // حفظ المسافة والوقت في كائن الخدمة
+                    nearestService.routeTime = time;
+                    nearestService.route = route; // لحفظ المسار الأقصر
+                }
+            }
+            completedRequests++;
+            if (completedRequests === totalRequests) {
+                // كل الطلبات اكتملت، الآن اعرض النتيجة
+                displayNearestRouteResult(nearestService);
+            }
+        }).on('routingerror', function(e) {
+            console.error('Routing error for service:', service.name, e.error);
+            completedRequests++;
+            if (completedRequests === totalRequests) {
+                displayNearestRouteResult(nearestService);
+            }
+        }).addTo(map); // أضف التحكم إلى الخريطة مؤقتاً لكي يتم تشغيل الأحداث
+    });
+
+    // دالة لعرض نتيجة أقرب مسار
+    function displayNearestRouteResult(service) {
+        if (service) {
+            // عرض المسار الأقصر على الخريطة
+            if (window.currentRouteControl) {
+                map.removeControl(window.currentRouteControl);
+            }
+            window.currentRouteControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(userLatLng.lat, userLatLng.lng),
+                    L.latLng(service.lat, service.lng)
+                ],
+                router: L.Routing.osrmv1(),
+                lineOptions: {
+                    styles: [{ color: '#007bff', weight: 6, opacity: 0.7 }] // لون المسار
+                },
+                createMarker: function() { return null; }, // لا تنشئ markers افتراضية
+                addWaypoints: false,
+                routeWhileDragging: false,
+                show: false, // لا تظهر لوحة التحكم بالمسار
+                altLineOptions: { extend: false }, // إخفاء المسارات البديلة
+                showAlternatives: false, // عدم إظهار المسارات البديلة في لوحة التحكم
+                fitSelectedRoutes: true // تكبير الخريطة على المسار المحدد
+            }).addTo(map);
+
+            // إظهار الماركر الخاص بالخدمة على المسار
+            const marker = L.marker([service.lat, service.lng], { id: service.id }).addTo(serviceMarkers);
+            marker.bindPopup(`<b>${service.name}</b><br>${service.address}<br>المسافة: ${(service.routeDistance / 1000).toFixed(2)} كم<br>الوقت المقدر: ${formatTime(service.routeTime)}<br><a href="#" data-id="${service.id}" class="show-details">المزيد من التفاصيل</a>`).openPopup();
+            
+            // عرض النتيجة في تنبيه (يمكنك تعديلها لاحقًا لعرضها بشكل أفضل)
+            alert(`أقرب خدمة هي: ${service.name}\nالمسافة عبر المسار: ${(service.routeDistance / 1000).toFixed(2)} كم\nالوقت المقدر: ${formatTime(service.routeTime)}`);
+        } else {
+            alert("لم يتم العثور على أي مسار لأي خدمة مطابقة.");
         }
     }
-    alert(nearestList);
-
-    // اختياري: يمكنك هنا عرض هذه الخدمات على الخريطة فقط
-    // displayServices(distances.map(d => d.service));
 });
+
+// دالة مساعدة لتنسيق الوقت من الثواني إلى نص (ساعات ودقائق)
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    let timeString = '';
+    if (hours > 0) {
+        timeString += `${hours} ساعة `;
+    }
+    timeString += `${minutes} دقيقة`;
+    return timeString.trim();
+}
 
 
 // **********************************************
